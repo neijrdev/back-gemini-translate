@@ -12,10 +12,12 @@ export class GoogleAIService implements IGoogleAIService {
 	async generatePhrases(
 		words: string[]
 	): Promise<Array<{ word: string; example_phrase_en: string; example_phrase_pt: string }>> {
-		const prompt = `For each of the following words [${words.join(', ')}], generate a JSON object with the following format: {"word":"a","example_phrase_en":"example.","example_phrase_pt":"Example."}' in the phrase examples enclose the passed word between ''.`;
-		const result = await this.model.generateContent(prompt);
-		const response = result.response;
-		const text = response.text().replace('```json', '').replace('```', '');
-		return JSON.parse(text);
+		const prompt = `For each of the following words [${words.join(', ')}], generate a JSON object with the following format: {"word":"a","example_phrase_en":"example.","example_phrase_pt":"Example."}' in the phrase examples enclose the passed word between []. {"word":"the", "example_phrase_en":"This is [the] example.", "example_phrase_pt":"Este é [o] exemplo."}`;
+		console.log(prompt);
+		// const result = await this.model.generateContent(prompt);
+		// const response = result.response;
+		// const text = response.text().replace('```json', '').replace('```', '');
+		// return JSON.parse(text);
+		return [{ word: '', example_phrase_en: '', example_phrase_pt: '' }];
 	}
 }
