@@ -1,0 +1,9 @@
+.venv/
+relatorio_palavras.csv
+relatorio_palavras.txt
+.env
+node_modules/
+dist/
+coverage/
+.env
+reports/
