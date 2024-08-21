@@ -14,6 +14,11 @@ export class PdfController {
 				return;
 			}
 
+			if (req.file.mimetype !== 'application/pdf') {
+				res.status(HTTP_STATUS.BAD_REQUEST).send({ error: 'O arquivo enviado não é um PDF.' });
+				return;
+			}
+
 			const { format } = req.body;
 
 			if (!format || (format !== 'txt' && format !== 'csv')) {
@@ -26,11 +31,7 @@ export class PdfController {
 			pdfStream.push(null);
 
 			// Processar o arquivo PDF a partir do stream
-			const reportContent = await this.generateWordReportUseCase.executeFromStream(
-				pdfStream,
-				TOP_N_WORDS_DEFAULT,
-				format
-			);
+			const reportContent = await this.generateWordReportUseCase.executeFromStream(pdfStream, TOP_N_WORDS_DEFAULT);
 
 			// Configura o tipo de conteúdo e o nome do arquivo
 			if (format === 'txt') {
