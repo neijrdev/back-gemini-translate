@@ -1,17 +1,16 @@
-// src/interfaces/controllers/PdfControllerFactory.ts
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import dotenv from 'dotenv';
 import { PdfService } from '../../infrastructure/services/PdfService';
 import { WordCountService } from '../../infrastructure/services/WordCountService';
 import { GoogleAIService } from '../../infrastructure/services/GoogleAIService';
-import { ReportService } from '../../infrastructure/services/ReportService';
+import { type FormatReports, ReportService } from '../../infrastructure/services/ReportService';
 import { GenerateWordReportUseCase } from '../../usecases/GenerateWordReportUseCase';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import dotenv from 'dotenv';
 import { PdfController } from './PdfController';
 
 dotenv.config();
 
 export class PdfControllerFactory {
-	static create(): PdfController {
+	static create(format: FormatReports): PdfController {
 		const pdfService = new PdfService();
 		const wordCountService = new WordCountService();
 
@@ -21,7 +20,7 @@ export class PdfControllerFactory {
 		const googleAIService = new GoogleAIService(model);
 
 		// Configurar o serviço de relatórios
-		const reportService = new ReportService('relatorio_palavras.csv', 'relatorio_palavras.txt');
+		const reportService = new ReportService(format);
 
 		// Criar o caso de uso
 		const generateWordReportUseCase = new GenerateWordReportUseCase(

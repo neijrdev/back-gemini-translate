@@ -1,7 +1,8 @@
 import { type IPdfService } from '../domain/services/IPdfService';
 import { type IWordCountService } from '../domain/services/IWordCountService';
 import { type IGoogleAIService } from '../domain/services/IGoogleAIService';
-import { type ReportPath, type IReportService } from '../domain/services/IReportService';
+import { type IReportService } from '../domain/services/IReportService';
+import { type Readable } from 'stream';
 
 export const TOP_N_WORDS_DEFAULT = 20;
 export class GenerateWordReportUseCase {
@@ -12,21 +13,14 @@ export class GenerateWordReportUseCase {
 		private readonly reportService: IReportService
 	) {}
 
-	async execute(filePath: string, topNWords: number): Promise<void> {
-		const initialN = 0;
-		const text = await this.pdfService.extractText(filePath);
+	async executeFromStream(stream: Readable, topNWords: number, format: 'txt' | 'csv'): Promise<string | Buffer> {
+		const initialCount = 0;
+		const text = await this.pdfService.extractTextFromStream(stream);
 		const wordCounts = this.wordCountService.countWords(text);
-		const topWords = wordCounts.sort((a, b) => b.count - a.count).slice(initialN, topNWords);
+		const topWords = wordCounts.sort((a, b) => b.count - a.count).slice(initialCount, topNWords);
 
-		try {
-			const phrases = await this.googleAIService.generatePhrases(topWords.map((w) => w.word));
-			await this.reportService.generateReport(topWords, phrases);
-		} catch (error) {
-			console.error('Erro ao gerar o relatório:', error);
-		}
-	}
+		const phrases = await this.googleAIService.generatePhrases(topWords.map((w) => w.word));
 
-	getReportPaths(): ReportPath {
-		return this.reportService.getReportPaths();
+		return await this.reportService.generateReport(topWords, phrases);
 	}
 }

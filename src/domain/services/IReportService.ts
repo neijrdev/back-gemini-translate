@@ -10,6 +10,5 @@ export interface IReportService {
 		wordCounts: WordCount[],
 		phrases: Array<{ word: string; example_phrase_en: string; example_phrase_pt: string }>,
 		batchSize?: number
-	) => Promise<void>;
-	getReportPaths: () => ReportPath;
+	) => Promise<string | Buffer>;
 }

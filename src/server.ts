@@ -8,14 +8,14 @@ import { AsyncHandler } from './infrastructure/midlewares/AsyncHandler';
 dotenv.config();
 
 const app = express();
-const upload = multer({ dest: 'uploads/' });
-
-const pdfController = PdfControllerFactory.create();
+const upload = multer({ storage: multer.memoryStorage() });
 
 app.post(
 	'/process-pdf',
 	upload.single('file'),
 	AsyncHandler.asyncHandler(async (req, res, next) => {
+		const pdfController = PdfControllerFactory.create(req.body.format);
+
 		await pdfController.processPdf(req, res, next);
 	})
 );
