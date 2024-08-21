@@ -25,7 +25,11 @@ async function main(): Promise<void> {
 	const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 	const googleAIService = new GoogleAIService(model);
 
-	const reportService = new ReportService('relatorio_palavras.csv', 'relatorio_palavras.txt');
+	const reportsPath = 'reports';
+	const reportService = new ReportService(
+		`${reportsPath}/relatorio_palavras.csv`,
+		`${reportsPath}/relatorio_palavras.txt`
+	);
 
 	const generateWordReportUseCase = new GenerateWordReportUseCase(
 		pdfService,
