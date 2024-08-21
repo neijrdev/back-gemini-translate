@@ -4,7 +4,6 @@ import { type IGoogleAIService } from '../domain/services/IGoogleAIService';
 import { type IReportService } from '../domain/services/IReportService';
 import { type Readable } from 'stream';
 
-export const TOP_N_WORDS_DEFAULT = 20;
 export class GenerateWordReportUseCase {
 	constructor(
 		private readonly pdfService: IPdfService,

@@ -1,8 +1,10 @@
 // src/interfaces/controllers/PdfController.ts
 import { type Request, type Response, type NextFunction } from 'express';
-import { TOP_N_WORDS_DEFAULT, type GenerateWordReportUseCase } from '../../usecases/GenerateWordReportUseCase';
+import { type GenerateWordReportUseCase } from '../../usecases/GenerateWordReportUseCase';
 import { HTTP_STATUS } from '../../infrastructure/models/HttpStatus';
 import { Readable } from 'stream';
+
+export const TOP_N_WORDS_DEFAULT = 20;
 
 export class PdfController {
 	constructor(private readonly generateWordReportUseCase: GenerateWordReportUseCase) {}
@@ -19,7 +21,8 @@ export class PdfController {
 				return;
 			}
 
-			const { format } = req.body;
+			// eslint-disable-next-line camelcase, @typescript-eslint/naming-convention
+			const { format, number_ranked_words = TOP_N_WORDS_DEFAULT } = req.body;
 
 			if (!format || (format !== 'txt' && format !== 'csv')) {
 				res.status(HTTP_STATUS.BAD_REQUEST).send({ error: 'Formato inválido. Use txt ou csv.' });
@@ -31,7 +34,7 @@ export class PdfController {
 			pdfStream.push(null);
 
 			// Processar o arquivo PDF a partir do stream
-			const reportContent = await this.generateWordReportUseCase.executeFromStream(pdfStream, TOP_N_WORDS_DEFAULT);
+			const reportContent = await this.generateWordReportUseCase.executeFromStream(pdfStream, number_ranked_words);
 
 			// Configura o tipo de conteúdo e o nome do arquivo
 			if (format === 'txt') {
