@@ -1,49 +1,28 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import promptSync from 'prompt-sync';
+// src/infrastructure/frameworks/expressServer.ts
+import express from 'express';
+import multer from 'multer';
 import dotenv from 'dotenv';
-import { PdfService } from './domain/services/PdfService';
-import { WordCountService } from './infrastructure/services/WordCountService';
-import { GoogleAIService } from './infrastructure/services/GoogleAIService';
-import { ReportService } from './infrastructure/services/ReportService';
-import { GenerateWordReportUseCase } from './usecases/GenerateWordReportUseCase';
-import { GenerateWordReportController } from './interfaces/controllers/GenerateWordReportController';
+import { PdfControllerFactory } from './interfaces/controllers/PdfControllerFactory';
+import { AsyncHandler } from './infrastructure/midlewares/AsyncHandler';
 
 dotenv.config();
 
-export const TOP_N_WORDS_DEFAULT = 20;
+const app = express();
+const upload = multer({ dest: 'uploads/' });
 
-(() => {
-	void main();
-})();
+const pdfController = PdfControllerFactory.create();
 
-async function main(): Promise<void> {
-	const pdfService = new PdfService();
-	const wordCountService = new WordCountService();
+app.post(
+	'/process-pdf',
+	upload.single('file'),
+	AsyncHandler.asyncHandler(async (req, res, next) => {
+		await pdfController.processPdf(req, res, next);
+	})
+);
 
-	// Configurar a API do Google
-	const genAI = new GoogleGenerativeAI(process.env.API_KEY ?? '');
-	const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-	const googleAIService = new GoogleAIService(model);
+const PORT_DEFAULT = 3000;
 
-	const reportsPath = 'reports';
-	const reportService = new ReportService(
-		`${reportsPath}/relatorio_palavras.csv`,
-		`${reportsPath}/relatorio_palavras.txt`
-	);
-
-	const generateWordReportUseCase = new GenerateWordReportUseCase(
-		pdfService,
-		wordCountService,
-		googleAIService,
-		reportService
-	);
-	const generateWordReportController = new GenerateWordReportController(generateWordReportUseCase);
-
-	const prompt = promptSync();
-	const suggestedPath = 'file.pdf';
-	const filePath = prompt(`Por favor, insira o caminho completo para o arquivo PDF: ${suggestedPath}`, suggestedPath);
-
-	await generateWordReportController.handleRequest(filePath, TOP_N_WORDS_DEFAULT);
-
-	void main();
-}
+const PORT = process.env.PORT ?? PORT_DEFAULT;
+app.listen(PORT, () => {
+	console.log(`Servidor rodando na porta ${PORT}`);
+});

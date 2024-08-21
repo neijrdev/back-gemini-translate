@@ -3,6 +3,7 @@ import { type IWordCountService } from '../domain/services/IWordCountService';
 import { type IGoogleAIService } from '../domain/services/IGoogleAIService';
 import { type ReportPath, type IReportService } from '../domain/services/IReportService';
 
+export const TOP_N_WORDS_DEFAULT = 20;
 export class GenerateWordReportUseCase {
 	constructor(
 		private readonly pdfService: IPdfService,
