@@ -2,7 +2,7 @@
 	"exclude": ["node_modules", "**/*.spec.ts", "**/*.test.ts"],
 	"include": ["src/**/*.ts"],
 	"compilerOptions": {
-		"types": ["node"],
+		"types": ["node", "jest"],
 		"target": "es6",
 		"module": "commonjs",
 		"rootDir": "./src",
