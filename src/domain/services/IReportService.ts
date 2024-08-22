@@ -1,10 +1,5 @@
 import { type WordCount } from '../entities/WordCount';
 
-export interface ReportPath {
-	txt: string;
-	csv: string;
-}
-
 export interface IReportService {
 	generateReport: (
 		wordCounts: WordCount[],
