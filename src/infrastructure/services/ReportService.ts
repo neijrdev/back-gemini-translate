@@ -30,6 +30,10 @@ export function getAcceptedReportFormats(): string {
 	return Object.values(FormatReports).join(', ');
 }
 
+export function makeBufferEmpty(): Buffer {
+	return Buffer.from('', 'utf8');
+}
+
 export class ReportService implements IReportService {
 	private readonly format: FormatReports;
 
@@ -41,7 +45,7 @@ export class ReportService implements IReportService {
 		wordCounts: WordCount[],
 		phrases: Array<{ word: string; example_phrase_en: string; example_phrase_pt: string }>,
 		batchSize: number = BATCH_SIZE_DEFAULT
-	): Promise<string | Buffer> {
+	): Promise<Buffer> {
 		switch (this.format) {
 			case FormatReports.txt:
 				return this.generateTxtReport(wordCounts, phrases, batchSize);
@@ -58,7 +62,7 @@ export class ReportService implements IReportService {
 		wordCounts: WordCount[],
 		phrases: Array<{ word: string; example_phrase_en: string; example_phrase_pt: string }>,
 		batchSize: number
-	): string {
+	): Buffer {
 		let reportTxt = '';
 
 		for (let i = 0; i < wordCounts.length; i += batchSize) {
@@ -66,7 +70,7 @@ export class ReportService implements IReportService {
 
 			for (const wordCount of batch) {
 				const phrase = phrases.find((p) => p.word === wordCount.word);
-				if (!phrase) return '';
+				if (!phrase) return makeBufferEmpty();
 
 				const { example_phrase_en: phraseEn, example_phrase_pt: phrasePt } = phrase;
 
@@ -76,7 +80,7 @@ export class ReportService implements IReportService {
 			}
 		}
 
-		return reportTxt;
+		return Buffer.from(reportTxt, 'utf8');
 	}
 
 	private generateCsvReport(
@@ -102,7 +106,7 @@ export class ReportService implements IReportService {
 			for (const wordCount of batch) {
 				const phrase = phrases.find((p) => p.word === wordCount.word);
 
-				if (!phrase) return Buffer.from('', 'utf8');
+				if (!phrase) return makeBufferEmpty();
 
 				const { example_phrase_en: phraseEn, example_phrase_pt: phrasePt } = phrase;
 
@@ -140,7 +144,7 @@ export class ReportService implements IReportService {
 			for (const wordCount of batch) {
 				const phrase = phrases.find((p) => p.word === wordCount.word);
 
-				if (!phrase) return Buffer.from('', 'utf8');
+				if (!phrase) return makeBufferEmpty();
 
 				const { example_phrase_en: phraseEn, example_phrase_pt: phrasePt } = phrase;
 

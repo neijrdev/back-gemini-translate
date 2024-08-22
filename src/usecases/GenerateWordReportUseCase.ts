@@ -12,7 +12,7 @@ export class GenerateWordReportUseCase {
 		private readonly reportService: IReportService
 	) {}
 
-	async executeFromStream(stream: Readable, topNWords: number): Promise<string | Buffer> {
+	async executeFromStream(stream: Readable, topNWords: number): Promise<Buffer> {
 		const initialCount = 0;
 		const text = await this.pdfService.extractTextFromStream(stream);
 		const wordCounts = this.wordCountService.countWords(text);
