@@ -18,7 +18,16 @@ export interface Phrase {
 
 export enum FormatReports {
 	txt = 'txt',
-	csv = 'csv'
+	csv = 'csv',
+	anki = 'anki'
+}
+
+export function isFormatReport(value: string): value is FormatReports {
+	return Object.values(FormatReports).includes(value as FormatReports);
+}
+
+export function getAcceptedReportFormats(): string {
+	return Object.values(FormatReports).join(', ');
 }
 
 export class ReportService implements IReportService {
@@ -33,12 +42,16 @@ export class ReportService implements IReportService {
 		phrases: Array<{ word: string; example_phrase_en: string; example_phrase_pt: string }>,
 		batchSize: number = BATCH_SIZE_DEFAULT
 	): Promise<string | Buffer> {
-		if (this.format === 'txt') {
-			return this.generateTxtReport(wordCounts, phrases, batchSize);
-		} else if (this.format === 'csv') {
-			return this.generateCsvReport(wordCounts, phrases, batchSize);
+		switch (this.format) {
+			case FormatReports.txt:
+				return this.generateTxtReport(wordCounts, phrases, batchSize);
+			case FormatReports.csv:
+				return this.generateCsvReport(wordCounts, phrases, batchSize);
+			case FormatReports.anki:
+				return this.generateAnkiReport(wordCounts, phrases, batchSize);
+			default:
+				throw new Error('Formato de relatório inválido.');
 		}
-		throw new Error('Formato de relatório inválido.');
 	}
 
 	private generateTxtReport(
@@ -99,6 +112,41 @@ export class ReportService implements IReportService {
 					quantidade: wordCount.count,
 					fraseEn: phraseEn || `The word '${wordCount.word}' could not be translated.`,
 					frasePt: phrasePt || 'A palavra não pôde ser traduzida.'
+				});
+			}
+		}
+
+		const csvBuffer = Buffer.from(csvStringifier.stringifyRecords(records));
+		return csvBuffer;
+	}
+
+	private generateAnkiReport(
+		wordCounts: WordCount[],
+		phrases: Array<{ word: string; example_phrase_en: string; example_phrase_pt: string }>,
+		batchSize: number
+	): Buffer {
+		const csvStringifier = createObjectCsvStringifier({
+			header: [
+				{ id: 'back', title: 'Back' },
+				{ id: 'front', title: 'Front' }
+			]
+		});
+
+		const records = [];
+
+		for (let i = 0; i < wordCounts.length; i += batchSize) {
+			const batch = wordCounts.slice(i, i + batchSize);
+
+			for (const wordCount of batch) {
+				const phrase = phrases.find((p) => p.word === wordCount.word);
+
+				if (!phrase) return Buffer.from('', 'utf8');
+
+				const { example_phrase_en: phraseEn, example_phrase_pt: phrasePt } = phrase;
+
+				records.push({
+					back: phraseEn || `The word '${wordCount.word}' could not be translated.`,
+					front: phrasePt || 'A palavra não pôde ser traduzida.'
 				});
 			}
 		}

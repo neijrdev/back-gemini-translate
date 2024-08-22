@@ -3,6 +3,7 @@ import { type Request, type Response, type NextFunction } from 'express';
 import { type GenerateWordReportUseCase } from '../../usecases/GenerateWordReportUseCase';
 import { HTTP_STATUS } from '../../infrastructure/models/HttpStatus';
 import { Readable } from 'stream';
+import { FormatReports, getAcceptedReportFormats, isFormatReport } from '../../infrastructure/services/ReportService';
 
 export const TOP_N_WORDS_DEFAULT = 20;
 
@@ -24,8 +25,10 @@ export class PdfController {
 			// eslint-disable-next-line camelcase, @typescript-eslint/naming-convention
 			const { format, number_ranked_words = TOP_N_WORDS_DEFAULT } = req.body;
 
-			if (!format || (format !== 'txt' && format !== 'csv')) {
-				res.status(HTTP_STATUS.BAD_REQUEST).send({ error: 'Formato inválido. Use txt ou csv.' });
+			if (!format || !isFormatReport(format)) {
+				res
+					.status(HTTP_STATUS.BAD_REQUEST)
+					.send({ error: `Formato inválido. Use um dos formatos a seguir: ${getAcceptedReportFormats()}` });
 				return;
 			}
 
@@ -37,11 +40,11 @@ export class PdfController {
 			const reportContent = await this.generateWordReportUseCase.executeFromStream(pdfStream, number_ranked_words);
 
 			// Configura o tipo de conteúdo e o nome do arquivo
-			if (format === 'txt') {
+			if (format === FormatReports.txt) {
 				res.setHeader('Content-Type', 'text/plain');
 				res.setHeader('Content-Disposition', 'attachment; filename=relatorio_palavras.txt');
 				res.send(reportContent);
-			} else if (format === 'csv') {
+			} else {
 				res.setHeader('Content-Type', 'text/csv');
 				res.setHeader('Content-Disposition', 'attachment; filename=relatorio_palavras.csv');
 				res.send(reportContent);
