@@ -1,5 +1,6 @@
 import { Readable } from 'stream';
 import { PdfService } from './PdfService';
+import pdfParse from 'pdf-parse';
 
 jest.mock('pdf-parse', () => {
 	return jest.fn();
@@ -18,8 +19,8 @@ describe('PdfService', () => {
 
 	it('should extract text from a valid PDF stream', async () => {
 		const mockText = 'This is the extracted text.';
-		const pdfParse = require('pdf-parse');
-		pdfParse.mockResolvedValue({ text: mockText });
+
+		(pdfParse as jest.Mock).mockResolvedValue({ text: mockText });
 
 		const stream = Readable.from(Buffer.from('sample pdf content'));
 
@@ -33,7 +34,7 @@ describe('PdfService', () => {
 		const errorStream = new Readable({
 			read() {
 				this.emit('error', new Error('Stream error'));
-			},
+			}
 		});
 
 		await expect(pdfService.extractTextFromStream(errorStream)).rejects.toThrow('Stream error');
