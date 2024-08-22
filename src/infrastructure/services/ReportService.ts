@@ -34,31 +34,32 @@ export function makeBufferEmpty(): Buffer {
 	return Buffer.from('', 'utf8');
 }
 
-export class ReportService implements IReportService {
-	private readonly format: FormatReports;
-
-	constructor(format: FormatReports) {
-		this.format = format;
-	}
-
-	async generateReport(
+interface ReportStrategy {
+	generateReport: (
 		wordCounts: WordCount[],
 		phrases: Array<{ word: string; example_phrase_en: string; example_phrase_pt: string }>,
-		batchSize: number = BATCH_SIZE_DEFAULT
-	): Promise<Buffer> {
-		switch (this.format) {
-			case FormatReports.txt:
-				return this.generateTxtReport(wordCounts, phrases, batchSize);
-			case FormatReports.csv:
-				return this.generateCsvReport(wordCounts, phrases, batchSize);
-			case FormatReports.anki:
-				return this.generateAnkiReport(wordCounts, phrases, batchSize);
-			default:
-				throw new Error('Formato de relatório inválido.');
-		}
-	}
+		batchSize: number
+	) => Buffer;
+}
 
-	private generateTxtReport(
+interface CsvReportStrategy extends ReportStrategy {
+	getHeaders: () => CsvHeader[];
+	formatRecord: (
+		wordCount: WordCount,
+		phrase: { word: string; example_phrase_en: string; example_phrase_pt: string }
+	) => Record<string, string>;
+}
+
+interface AnkiReportStrategy extends ReportStrategy {
+	getHeaders: () => CsvHeader[];
+	formatRecord: (
+		wordCount: WordCount,
+		phrase: { word: string; example_phrase_en: string; example_phrase_pt: string }
+	) => Record<string, string>;
+}
+
+class TxtReport implements ReportStrategy {
+	generateReport(
 		wordCounts: WordCount[],
 		phrases: Array<{ word: string; example_phrase_en: string; example_phrase_pt: string }>,
 		batchSize: number
@@ -82,80 +83,123 @@ export class ReportService implements IReportService {
 
 		return Buffer.from(reportTxt, 'utf8');
 	}
+}
 
-	private generateCsvReport(
-		wordCounts: WordCount[],
-		phrases: Array<{ word: string; example_phrase_en: string; example_phrase_pt: string }>,
-		batchSize: number
-	): Buffer {
-		const csvStringifier = createObjectCsvStringifier({
-			header: [
-				{ id: 'palavra', title: 'palavra (en)' },
-				{ id: 'traducao', title: 'tradução (pt-BR)' },
-				{ id: 'quantidade', title: 'quantidade' },
-				{ id: 'fraseEn', title: 'frase (en)' },
-				{ id: 'frasePt', title: 'frase (pt-BR)' }
-			]
-		});
-
-		const records = [];
-
-		for (let i = 0; i < wordCounts.length; i += batchSize) {
-			const batch = wordCounts.slice(i, i + batchSize);
-
-			for (const wordCount of batch) {
-				const phrase = phrases.find((p) => p.word === wordCount.word);
-
-				if (!phrase) return makeBufferEmpty();
-
-				const { example_phrase_en: phraseEn, example_phrase_pt: phrasePt } = phrase;
-
-				records.push({
-					palavra: wordCount.word,
-					traducao: phrasePt || 'A palavra não pôde ser traduzida.',
-					quantidade: wordCount.count,
-					fraseEn: phraseEn || `The word '${wordCount.word}' could not be translated.`,
-					frasePt: phrasePt || 'A palavra não pôde ser traduzida.'
-				});
-			}
-		}
-
-		const csvBuffer = Buffer.from(csvStringifier.stringifyRecords(records));
-		return csvBuffer;
+class CsvReport implements CsvReportStrategy {
+	getHeaders(): CsvHeader[] {
+		return [
+			{ id: 'palavra', title: 'palavra (en)' },
+			{ id: 'traducao', title: 'tradução (pt-BR)' },
+			{ id: 'quantidade', title: 'quantidade' },
+			{ id: 'fraseEn', title: 'frase (en)' },
+			{ id: 'frasePt', title: 'frase (pt-BR)' }
+		];
 	}
 
-	private generateAnkiReport(
+	formatRecord(
+		wordCount: WordCount,
+		phrase: { word: string; example_phrase_en: string; example_phrase_pt: string }
+	): Record<string, string> {
+		return {
+			palavra: wordCount.word,
+			traducao: phrase.example_phrase_pt || 'A palavra não pôde ser traduzida.',
+			quantidade: wordCount.count.toString(),
+			fraseEn: phrase.example_phrase_en || `The word '${wordCount.word}' could not be translated.`,
+			frasePt: phrase.example_phrase_pt || 'A palavra não pôde ser traduzida.'
+		};
+	}
+
+	generateReport(
 		wordCounts: WordCount[],
 		phrases: Array<{ word: string; example_phrase_en: string; example_phrase_pt: string }>,
 		batchSize: number
 	): Buffer {
-		const csvStringifier = createObjectCsvStringifier({
-			header: [
-				{ id: 'back', title: 'Back' },
-				{ id: 'front', title: 'Front' }
-			]
-		});
-
-		const records = [];
+		const csvStringifier = createObjectCsvStringifier({ header: this.getHeaders() });
+		const records: Array<Record<string, string | number>> = [];
 
 		for (let i = 0; i < wordCounts.length; i += batchSize) {
 			const batch = wordCounts.slice(i, i + batchSize);
 
 			for (const wordCount of batch) {
 				const phrase = phrases.find((p) => p.word === wordCount.word);
-
 				if (!phrase) return makeBufferEmpty();
 
-				const { example_phrase_en: phraseEn, example_phrase_pt: phrasePt } = phrase;
-
-				records.push({
-					back: phraseEn || `The word '${wordCount.word}' could not be translated.`,
-					front: phrasePt || 'A palavra não pôde ser traduzida.'
-				});
+				records.push(this.formatRecord(wordCount, phrase));
 			}
 		}
 
-		const csvBuffer = Buffer.from(csvStringifier.stringifyRecords(records));
-		return csvBuffer;
+		return Buffer.from(csvStringifier.stringifyRecords(records));
+	}
+}
+
+class AnkiReport implements AnkiReportStrategy {
+	getHeaders(): CsvHeader[] {
+		return [
+			{ id: 'back', title: 'Back' },
+			{ id: 'front', title: 'Front' }
+		];
+	}
+
+	formatRecord(
+		wordCount: WordCount,
+		phrase: { word: string; example_phrase_en: string; example_phrase_pt: string }
+	): Record<string, string> {
+		return {
+			back: phrase.example_phrase_en || `The word '${wordCount.word}' could not be translated.`,
+			front: phrase.example_phrase_pt || 'A palavra não pôde ser traduzida.'
+		};
+	}
+
+	generateReport(
+		wordCounts: WordCount[],
+		phrases: Array<{ word: string; example_phrase_en: string; example_phrase_pt: string }>,
+		batchSize: number
+	): Buffer {
+		const csvStringifier = createObjectCsvStringifier({ header: this.getHeaders() });
+		const records: Array<Record<string, string>> = []; // Usa o tipo específico aqui
+
+		for (let i = 0; i < wordCounts.length; i += batchSize) {
+			const batch = wordCounts.slice(i, i + batchSize);
+
+			for (const wordCount of batch) {
+				const phrase = phrases.find((p) => p.word === wordCount.word);
+				if (!phrase) return makeBufferEmpty();
+
+				records.push(this.formatRecord(wordCount, phrase));
+			}
+		}
+
+		return Buffer.from(csvStringifier.stringifyRecords(records));
+	}
+}
+
+class ReportStrategyFactory {
+	static getStrategy(format: FormatReports): ReportStrategy {
+		switch (format) {
+			case FormatReports.txt:
+				return new TxtReport();
+			case FormatReports.csv:
+				return new CsvReport();
+			case FormatReports.anki:
+				return new AnkiReport();
+			default:
+				throw new Error('Formato não suportado.');
+		}
+	}
+}
+
+export class ReportService implements IReportService {
+	private readonly strategy: ReportStrategy;
+
+	constructor(format: FormatReports) {
+		this.strategy = ReportStrategyFactory.getStrategy(format);
+	}
+
+	async generateReport(
+		wordCounts: WordCount[],
+		phrases: Array<{ word: string; example_phrase_en: string; example_phrase_pt: string }>,
+		batchSize: number = BATCH_SIZE_DEFAULT
+	): Promise<Buffer> {
+		return this.strategy.generateReport(wordCounts, phrases, batchSize);
 	}
 }
