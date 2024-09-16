@@ -2,12 +2,14 @@
 import express from 'express';
 import multer from 'multer';
 import dotenv from 'dotenv';
+import cors from 'cors';
 import { PdfControllerFactory } from './interfaces/controllers/PdfControllerFactory';
 import { AsyncHandler } from './infrastructure/midlewares/AsyncHandler';
 
 dotenv.config();
 
 const app = express();
+app.use(cors({}));
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.post(
